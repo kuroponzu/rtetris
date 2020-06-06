@@ -1,7 +1,12 @@
+require "bundler"
+Bundler.require
+require "curses"
+
 class Tetris
   attr
-    :block
-    :board
+    :block # [color,[y,x]]
+    :board # [[color]]
+
   def initialize(y,x)
     @block = read_block
     @board = Array.new(y) { Array.new(x) { 0 } }
@@ -21,19 +26,18 @@ class Tetris
 
   # [0]は色を表す、ミノに対して色を割り当て、ミノ未配置の場所については
   # [0] = 0として、扱う。
+  # return [int,Blocks]
+  # テトリミノの色(int:1..7)と形を返す。
+  # 色が0の場合は、テトリミノが配置されてないことを表す。
   def read_block
     [rand(1..7), Blocks[rand(Blocks.size)]]
   end
 
-
   def move?(bs)
-    bs.all? do |y,n|
-      if (@board.size > y && 0 <= y)
-        if (@board[y].size > x && 0 <= x)
-          @board[y][x] == 0
-        else
-          false
-        end
+    bs.all? do |y,x|
+      if (@board.size > y && 0 <= y) && (@board[y].size > x && 0 <= x)
+        # 0にすることでテトリミノがないことを表す。
+        @board[y][x] == 0
       else
         false
       end
@@ -48,7 +52,7 @@ class Tetris
     bs = @block[1].map do |y,x|
       [
         (cy + (x -cx) * Math.sin(r) + (y - cy) * Math.cos(r)).round,
-        (cy + (x -cx) * Math.sin(r) + (y - cy) * Math.sin(r)).round
+        (cx + (x -cx) * Math.cos(r) + (y - cy) * Math.sin(r)).round
       ]
     end
     if move?(bs)
@@ -85,9 +89,110 @@ class Tetris
       @block[1].each do |y,x|
         @board[y][x] = @block[0]
       end
-      @block = rand_block
+      @block = read_block
+    end
+  end
+
+
+  def delete
+    for y in 0..@board.size - 1
+      # 一列に並んでいるのかを判定
+      if @board[y].all? {|c| c !=0}
+        for yy in 0..y-1
+          @board[yy].each.with_index do |c,x|
+            @board[y - yy][x] = @board[y - yy - 1][x]
+          end
+        end
+      end
+    end
+  end
+
+  C = Curses
+
+  def controller(c)
+    case c
+    when "w"
+      rotate
+    when "s"
+      down
+    when "d"
+      right
+    when "a"
+      left
+    when "q"
+      C.close_screen
+      exit
+    else
+      nil
+    end
+  end
+
+  def display_init
+    C.init_screen
+    C.start_color
+    C.use_default_colors
+    C.noecho
+    C.curs_set(0)
+
+    [
+      C::COLOR_BLACK,
+      C::COLOR_RED,
+      C::COLOR_GREEN,
+      C::COLOR_YELLOW,
+      C::COLOR_BLUE,
+      C::COLOR_MAGENTA,
+      C::COLOR_CYAN,
+      C::COLOR_WHITE,
+    ].each.with_index do |c,i|
+      C.init_pair(i, C::COLOR_WHITE, c)
+    end
+  end
+
+  def display
+    C.clear
+    C.addstr("-" * (@board[0].size + 2))
+    C.addstr("\n")
+    for y in 0..@board.size - 1
+      C.addstr("|")
+      for x in 0..@board[y].size - 1
+        # テトリミノがおいてあるかどうかを確認している。
+        c = @block[1].any? { |a| a == [y,x] } ? @block[0] : @board[y][x]
+        C.attron(C.color_pair(c))
+        C.addstr(" ")
+        C.attroff(C.color_pair(c))
+      end
+      C.addstr("|")
+      C.addstr("\n")
+    end
+    C.addstr("-" * (@board[0].size + 2))
+    C.addstr("\n")
+    C.refresh
+  end
+
+  def run 
+    display_init
+    # Thread間の処理の同期に利用
+    m = Mutex.new
+    Thread.new do
+      loop do
+        m.synchronize do
+          fall
+          delete
+          display
+        end
+        sleep 1
+      end
+    end
+
+    loop do
+      controller(C.getch.to_s)
+      m.synchronize do
+        delete
+        display
+      end
     end
   end
 end
 
 
+Tetris.new(15,10).run
