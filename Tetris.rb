@@ -54,14 +54,11 @@ class Tetris
 
     bs = @block[1].map do |y,x|
       [
-        x,y
+        # 回転後のy座標
+        (cy + (x -cx) * Math.sin(r) + (y - cy) * Math.cos(r)).round,
+        # 回転後のx座標
+        (cx + (x -cx) * Math.cos(r) - (y - cy) * Math.sin(r)).round
       ]
-      # [
-      #   # 回転後のy座標
-      #   (cy + (x -cx) * Math.sin(r) + (y - cy) * Math.cos(r)).round,
-      #   # 回転後のx座標
-      #   (cx + (x -cx) * Math.cos(r) - (y - cy) * Math.sin(r)).round
-      # ]
     end
     if move?(bs)
       @block[1] = bs
