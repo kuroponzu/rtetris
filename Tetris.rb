@@ -13,7 +13,7 @@ class Tetris
   end
 
   # 上から順に
-  # 縦長、T時、逆L字、L字、逆Z、Z、四角を表す
+  # 縦長、T時、L字、逆L字、Z、逆Z、四角を表す
   Blocks = [
     [[0,0],[1,0],[2,0],[3,0]],
     [[0,0],[0,1],[0,2],[1,1]],
@@ -47,13 +47,21 @@ class Tetris
   def rotate
     r = Math::PI / 2
 
+    # ブロックのy座標の基準
     cy = (@block[1].map {|a| a[0]}.reduce(:+) / @block[1].size)
+    # ブロックのx座標の基準
     cx = (@block[1].map {|a| a[1]}.reduce(:+) / @block[1].size)
+
     bs = @block[1].map do |y,x|
       [
-        (cy + (x -cx) * Math.sin(r) + (y - cy) * Math.cos(r)).round,
-        (cx + (x -cx) * Math.cos(r) + (y - cy) * Math.sin(r)).round
+        x,y
       ]
+      # [
+      #   # 回転後のy座標
+      #   (cy + (x -cx) * Math.sin(r) + (y - cy) * Math.cos(r)).round,
+      #   # 回転後のx座標
+      #   (cx + (x -cx) * Math.cos(r) - (y - cy) * Math.sin(r)).round
+      # ]
     end
     if move?(bs)
       @block[1] = bs
@@ -61,32 +69,32 @@ class Tetris
   end
 
   def down
-    bs = @block[1].map { |y,x| [y+1,x] }
+    bs = @block[1].map { |y, x| [y + 1, x] }
     if move?(bs)
       @block[1] = bs
     end
   end
 
   def right
-    bs = @block[1].map { |y,x| [y,x + 1] }
+    bs = @block[1].map { |y, x| [y, x + 1] }
     if move?(bs)
       @block[1] = bs
     end
   end
 
   def left
-    bs = @block[1].map { |y,x| [y, x - 1] }
+    bs = @block[1].map { |y, x| [y, x - 1] }
     if move?(bs)
       @block[1] = bs
     end
   end
 
   def fall
-    bs = @block[1].map { |y,x| [y+1,x] }
+    bs = @block[1].map { |y, x| [y+1, x] }
     if move?(bs)
       @block[1] = bs
     else
-      @block[1].each do |y,x|
+      @block[1].each do |y, x|
         @board[y][x] = @block[0]
       end
       @block = read_block
@@ -99,7 +107,7 @@ class Tetris
       # 一列に並んでいるのかを判定
       if @board[y].all? {|c| c !=0}
         for yy in 0..y-1
-          @board[yy].each.with_index do |c,x|
+          @board[yy].each.with_index do |c, x|
             @board[y - yy][x] = @board[y - yy - 1][x]
           end
         end
@@ -194,5 +202,4 @@ class Tetris
   end
 end
 
-
-Tetris.new(15,10).run
+Tetris.new(30,30).run
